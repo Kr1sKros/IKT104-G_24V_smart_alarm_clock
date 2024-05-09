@@ -4,8 +4,9 @@
 #include <ctime>
 #include <string>
 
-#include "newsfeed.h"
+#include "text_utilities.h"
 #include "graphics.h"
+#include "network_utilities.h"
 
 // Define the pins for I2C communication
 I2C lcdI2C(D14, D15); // SDA, SCL
@@ -19,6 +20,7 @@ DigitalIn button(D7, PullUp);
 // Function prototypes
 
 PageController page_controller;
+net_util nu;
 
 class Boot : public Page {
 public:
@@ -40,7 +42,7 @@ public:
         lcd.setCursor(0, 1);
         lcd.printf("Grimstad");
         ThisThread::sleep_for(2s);
-
+        
         lcd.clear();
         lcd.printf("Sun 28 Apr 13:55");
     }
@@ -67,20 +69,27 @@ public:
 class NewsPage : public Page {
     void display() override {
         lcd.clear();
+        lcd.setCursor(0, 0);  // Set cursor to the first row
         lcd.printf("Top news");
-        lcd.setCursor(0, 1);
+        lcd.setCursor(0, 1);  // Set cursor to the second row
         lcd.printf("fetching...");
-        
-        std::string news_header = fetchNewsHeader();
-        std::cout << news_header << endl;
+
+        std::string news_header = text_utils::extractTitle(nu.send_get_request("rss.cnn.com", "/rss/cnn_latest.rss").c_str());
+
         lcd.clear();
-        lcd.printf("Top news");
-        lcd.setCursor(0, 1);
-        lcd.printf("%16s", news_header.c_str());
+        lcd.setCursor(0, 0);  // Set cursor to the second row
+        lcd.printf("top news:");
+        text_utils::printScrolling(&lcd, news_header, 300, 1);
+        
+        //lcd.printf("%s", title.c_str());
     }
 };
 
 int main() {
+
+    //std::string result = nu.send_get_request("rss.cnn.com", "/rss/cnn_latest.rss");
+    
+    //cout << extractTitle(result.c_str()) << endl;
 
     //TestPage tp;
     //AnotherPage ap;
