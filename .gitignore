@@ -2,5 +2,3 @@
 .mbed
 projectfiles
 *.py*
-Mbed-os/
-BUILD/
