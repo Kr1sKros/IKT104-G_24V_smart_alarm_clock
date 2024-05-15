@@ -2,5 +2,5 @@
 .mbed
 projectfiles
 *.py*
-BUILD
-HTS221
+Mbed-os/
+BUILD/
