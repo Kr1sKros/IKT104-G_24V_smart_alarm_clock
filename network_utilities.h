@@ -171,6 +171,112 @@ public:
         return response_string;
     }
 
+    std::string send_https_request(const char* hostname, const char* resource, const char* cert)
+    {
+        TLSSocket https_socket;
+        const char https_request_template[] = "GET %s HTTP/1.1\r\n"
+                                            "Host: %s\r\n"
+                                            "Connection: close\r\n"
+                                            "\r\n";
+        
+        char https_request[1024];
+        std::snprintf(https_request, sizeof(https_request), https_request_template, resource, hostname);
+        this->socket.close();
+
+        https_socket.set_timeout(500);
+        nsapi_size_or_error_t result = https_socket.open(network);
+
+        if (result != NSAPI_ERROR_OK)
+        {
+            printf("Failed to open TLS socket, error code: %d\n", result);
+            return "";
+        }
+
+        SocketAddress server_address;
+        do {
+            result = this->network->gethostbyname(hostname, &server_address);
+            if (result != NSAPI_ERROR_OK)
+            {
+                printf("Failed to get the IP address of the host, error code: %d\n", result);
+            }
+        }while (result != NSAPI_ERROR_OK);
+
+        server_address.set_port(443);
+
+        result = https_socket.set_root_ca_cert(cert);
+
+        if (result != NSAPI_ERROR_OK)
+        {
+            printf("Failed to get the root certificate of the website, error code: %d\n", result);
+            return "";
+        }
+
+        https_socket.set_hostname(hostname);
+        result = https_socket.connect(server_address);
+
+        if (result != NSAPI_ERROR_OK)
+        {
+            printf("Failed to connect to the server %s, error code: %d\n", hostname, result);
+            return "";
+        }
+
+        nsapi_size_t BytestoSend = strlen(https_request);
+        nsapi_size_t sentBytes = 0;
+
+        while (BytestoSend > 0)
+        {
+            sentBytes = https_socket.send(https_request + sentBytes, BytestoSend);
+            if (sentBytes < 0) break;
+            else printf("Sent %d bytes\n", sentBytes);
+
+            if (sentBytes < 0)
+            {
+                printf("Failed to sent https request: %d", sentBytes);
+            }
+
+            BytestoSend -= sentBytes;
+        }
+
+        printf("Request sent successfully, handling response...\n\n");
+
+        char response[2000] = {0};
+        int counter = 0;
+        char chunk[100] = {0};
+        nsapi_size_t remainingBytes = 100;
+        nsapi_size_or_error_t receivedBytes = 0;
+        
+        do
+        {
+            result = https_socket.recv(chunk, 100);
+            for (int i = 0; i < 100; i++)
+            {
+                if (chunk[i] == '\0') break;
+                response[counter] = chunk[i];
+                chunk[i] = 0;
+                counter++;
+            }
+        } while(result != 0);
+
+        https_socket.close();
+
+        // Vi får noen ganger tilbake en string som har symboler etter json-dataene, så vi fjerner dem her
+        int safetyCounter = 100;
+        while (response[response.size() - 1] != '}')
+        {
+            if (!response.empty())
+            {
+                response.erase(response.size() - 1);
+            }
+            safetyCounter--;
+            if (safetyCounter == 0)
+            {
+                break;
+            }
+        }
+        
+        return response;
+    }
+
     
 };
 
