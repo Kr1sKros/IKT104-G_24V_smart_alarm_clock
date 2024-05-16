@@ -22,6 +22,15 @@ DFRobot_RGBLCD1602 lcd(&lcdI2C);  // Create an LCD display object
 
 // Define the button pin
 DigitalIn button(D7, PullUp);
+DigitalIn incButton(D0, PullUp);
+DigitalIn decButton(D2, PullUp);
+DigitalIn enterButton(D4, PullUp);
+
+//Define the alarm
+struct  {
+    int time_in_min;
+    std::string alarm_state;
+} alarm;
 
 // Function prototypes
 
@@ -54,13 +63,73 @@ public:
     }
 };
 
-class TestPage : public Page {
+class SettAlarm : public Page {
 public:
-    void display() override {
+    void display() override {    
         lcd.clear();
-        lcd.printf("We are very much testing");
-        lcd.setCursor(0, 1);
-        lcd.printf("%i", page_controller.get_current_page());
+        lcd.printf("Sett Alarm");
+        int sett_hours = 0;
+        int sett_minutes = 0;
+        int current_time_setter = 0;
+        if(current_time_setter != 2) {
+        while(1) {
+        // Check if the button is pressed
+            if(!incButton) {
+                // Button is pressed, change the state and call the corresponding function
+                lcd.clear();
+                lcd.printf("Sett Alarm");
+                lcd.setCursor(0, 1);
+                if(current_time_setter == 0) {
+                    lcd.printf("Hour: %i", sett_hours%24);
+                    sett_hours++;
+                }
+                else if (current_time_setter == 1) {
+                    lcd.printf("Minute: %i", sett_minutes%60);
+                    sett_minutes++;
+                }
+            while (!incButton) {};
+            }
+            else if(!decButton) {
+                // Button is pressed, change the state and call the corresponding function
+                lcd.clear();
+                lcd.printf("Sett Alarm");
+                lcd.setCursor(0, 1);
+                if(current_time_setter == 0) {
+                    lcd.printf("Hour: %i", sett_hours%24);
+                    sett_hours--;
+                }
+                else if (current_time_setter == 1) {
+                    lcd.printf("Minute: %i", sett_minutes%60);
+                    sett_minutes--;
+                }
+                while (!decButton) {};
+            }
+            else if(!enterButton) {
+                if(current_time_setter == 0) {
+                    current_time_setter++;
+                    lcd.clear();
+                    lcd.printf("Sett Alarm");
+                    lcd.setCursor(0, 1);
+                    lcd.printf("Minute: %i", sett_minutes);
+                }
+                else if (current_time_setter == 1) {
+                    current_time_setter++;
+                    int sum = sett_minutes;
+                    sum += sett_hours * 60;
+                    alarm.time_in_min = sum;
+                    alarm.alarm_state = "Enabled";
+                    lcd.clear();
+                    lcd.printf("Sett Alarm");
+                    lcd.setCursor(0, 1);
+                    lcd.printf("Alarm: %i:%i", sett_hours,sett_minutes);
+                }
+                else if(current_time_setter == 2) {
+                    current_time_setter = 0;
+                }
+                while (!enterButton) {};
+            }
+        ThisThread::sleep_for(100ms); // Add a small delay to debounce the button
+    }}
     }
 };
 class AnotherPage : public Page {
@@ -116,7 +185,7 @@ int main() {
 
     //TestPage tp;
     //AnotherPage ap;
-    page_controller.add_page(static_cast<Page*>(new TestPage));
+    page_controller.add_page(static_cast<Page*>(new SettAlarm));
     page_controller.add_page(static_cast<Page*>(new AnotherPage));
     page_controller.add_page(static_cast<Page*>(new NewsPage));
 
