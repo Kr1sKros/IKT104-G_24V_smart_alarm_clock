@@ -13,6 +13,7 @@
 
 #include <iostream>
 #include <string>
+#include <json.hpp>
 
 class net_util {
 public:
@@ -171,7 +172,7 @@ public:
         return response_string;
     }
 
-    std::string send_https_request(const char* hostname, const char* resource, const char* cert)
+    nlohmann::json send_https_request(const char* hostname, const char* resource, const char* cert)
     {
         TLSSocket https_socket;
         const char https_request_template[] = "GET %s HTTP/1.1\r\n"
@@ -189,7 +190,7 @@ public:
         if (result != NSAPI_ERROR_OK)
         {
             printf("Failed to open TLS socket, error code: %d\n", result);
-            return "";
+            return NULL;
         }
 
         SocketAddress server_address;
@@ -208,7 +209,7 @@ public:
         if (result != NSAPI_ERROR_OK)
         {
             printf("Failed to get the root certificate of the website, error code: %d\n", result);
-            return "";
+            return NULL;
         }
 
         https_socket.set_hostname(hostname);
@@ -217,7 +218,7 @@ public:
         if (result != NSAPI_ERROR_OK)
         {
             printf("Failed to connect to the server %s, error code: %d\n", hostname, result);
-            return "";
+            return NULL;
         }
 
         nsapi_size_t BytestoSend = strlen(https_request);
@@ -259,25 +260,22 @@ public:
 
         https_socket.close();
 
-        // Vi får noen ganger tilbake en string som har symboler etter json-dataene, så vi fjerner dem her
-        int safetyCounter = 100;
-        while (response[response.size() - 1] != '}')
+        // Fjerner eventuelt drit som har sneket seg bak json-dataene
+        int safetyCounter = 1000;
+        while (response[strlen(response) - 1] != '}')
         {
-            if (!response.empty())
-            {
-                response.erase(response.size() - 1);
-            }
+            response[strlen(response) - 1] = '\0';
             safetyCounter--;
             if (safetyCounter == 0)
             {
-                break;
+                return 1;
             }
         }
-        
-        return response;
-    }
 
-    
+        char *ptr = strchr(response, '{');
+        nlohmann::json jsonData = nlohmann::json::parse(ptr);
+        return jsonData;
+    }
 };
 
 
