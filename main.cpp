@@ -9,6 +9,8 @@
 #include "text_utilities.h"
 #include "graphics.h"
 #include "network_utilities.h"
+#include "json.hpp"
+#include "certificate.h"
 
 // Define the pins for I2C communication
 I2C lcdI2C(D14, D15); // SDA, SCL
