@@ -18,7 +18,7 @@
 
 class text_utils {
 public:
-
+    // method used to extract the news headers from the xml format used by the rss feed
     static std::string extractTitle(const char* xml) {
         const char* startTag = "<title><![CDATA[";
         const char* endTag = "]]></title>";
@@ -72,8 +72,7 @@ public:
         return result;
     }
 
-
-
+    // Method that makes the news headers scroll on the lcd display
     static void printScrolling(DFRobot_RGBLCD1602* lcd, const std::string& text, bool display_prefix = false, int delay_ms = 260, uint8_t row = 0) {
         // Calculate the number of iterations needed for scrolling
         int iterations = text.length() - 16;
