@@ -56,8 +56,9 @@ Thread play_melody;
 
 //Define global variables
 int current_time_setter = 0;
-int sett_hours = 0;
-int sett_minutes = 0;
+int set_hours = 0;
+int set_minutes = 0;
+int SetAlarmDisplaynumber;
 bool input_happened = false;
 bool unmute = false;
 bool snoozeIsHit = false;
@@ -67,26 +68,34 @@ void alarm_melody();
 void AddTime() 
 {
     input_happened = true;
-    if(page_controller.get_current_page() == 0) {
-        if(current_time_setter == 0) sett_hours++;
-        else if (current_time_setter == 1) sett_minutes++;
+    if(page_controller.get_current_page() == SetAlarmDisplaynumber) {
+        if(current_time_setter == 0) set_hours++;
+        else if (current_time_setter == 1) set_minutes++;
     }
-    else if(page_controller.get_current_page() == 1) {
+    else if(page_controller.get_current_page() == SetAlarmDisplaynumber+1) {
         if(alarm.alarm_state == "going") {
             alarm.alarm_state = "snooze";
             snoozeIsHit = true;
         }
-        else alarm.alarm_state = "mute";
+        else if(alarm.alarm_state == "active"){
+                alarm.alarm_state = "mute";
+        }
     }
 }
 void SubtractTime() 
 {
     input_happened = true;
-    if(page_controller.get_current_page() == 0) {
-        if(current_time_setter == 0) sett_hours--;
-        else if (current_time_setter == 1) sett_minutes--;
+    if(page_controller.get_current_page() == SetAlarmDisplaynumber) {
+        if(current_time_setter == 0) {
+            if(set_hours <= 0) set_hours=0;
+            else set_hours--;
+        }
+        else if (current_time_setter == 1) {
+            if(set_minutes <= 0) set_minutes=0;
+            else set_minutes--;
+        }
     }
-    else if(page_controller.get_current_page() == 1) {
+    else if(page_controller.get_current_page() == SetAlarmDisplaynumber+1) {
         if(alarm.alarm_state == "deactive")
         alarm.alarm_state = "active";
     }
@@ -94,15 +103,15 @@ void SubtractTime()
 void EnterValue() 
 {
     input_happened = true;
-    if(page_controller.get_current_page() == 0) {
+    if(page_controller.get_current_page() == SetAlarmDisplaynumber) {
         current_time_setter++;
         if (current_time_setter == 2) {
-            alarm.minutes = sett_minutes % 60;
-            alarm.hours = sett_hours % 24;
+            alarm.minutes = set_minutes % 60;
+            alarm.hours = set_hours % 24;
             alarm.alarm_state = "active";
         }
     }
-    else if(page_controller.get_current_page() == 1) {
+    else if(page_controller.get_current_page() == SetAlarmDisplaynumber+1) {
         alarm.alarm_state = "deactive";
     }
 }
@@ -137,14 +146,9 @@ public:
         longitude = std::stof(lonStr);
         const char* city = cityStr.c_str();
 
-        // Masse piss for å få rett formatering på dateTime
-        dateTimeStr = dateTimeStr.substr(0, 16);
-        std::tm tempTime = {};
-        std::stringstream stringStream(dateTimeStr);
-        stringStream >> std::get_time(&tempTime, "%Y-%m-%d %H:%M");
-        char currentTime[30];
-        std::strftime(currentTime, sizeof(currentTime), "%a %d %B %H:%M", &tempTime);
-        //std::strftime(currentTime, sizeof(currentTime), "%a %d %B %Y", &tempTime);
+
+        
+
 
         lcd.clear();
         lcd.printf("Unix epoch time: ");
@@ -164,16 +168,26 @@ public:
         lcd.printf(city);
         ThisThread::sleep_for(2s);
         
+        page_controller.display(0);
+    }
+};
+
+class dateTime : public Page {
+public:
+    void display() override { //Displays weekday, date, month and time
+        time_t seconds = time(NULL);
+        char currentTime[32];
+        std::strftime(currentTime, sizeof(currentTime), "%a %d %B %H:%M", localtime(&seconds));
         lcd.clear();
         lcd.printf(currentTime);
     }
 };
-
-class SettAlarm : public Page {
+class SetAlarm : public Page {
 public:
-    void display() override {    
-        sett_hours = 0;
-        sett_minutes = 0;
+    void display() override {  
+        SetAlarmDisplaynumber = page_controller.get_current_page();  
+        set_hours = 0;
+        set_minutes = 0;
         bool entered_page = true;
         while(1) {
             if(input_happened || entered_page) {
@@ -181,12 +195,12 @@ public:
                 input_happened = false;
                 lcd.clear();
                 if(current_time_setter == 0) {
-                    lcd.printf("Sett Alarm %i:%i", sett_hours%24,sett_minutes%60);
+                    lcd.printf("Sett Alarm %i:%i", set_hours%24,set_minutes%60);
                     lcd.setCursor(0,1);
                     lcd.printf("Enter hour");
                 }
                 else if(current_time_setter == 1) {
-                    lcd.printf("Sett Alarm %i:%i", sett_hours%24,sett_minutes%60);
+                    lcd.printf("Sett Alarm %i:%i", set_hours%24,set_minutes%60);
                     lcd.setCursor(0,1);
                     lcd.printf("Enter minute");
                 }
@@ -214,7 +228,7 @@ public:
                 entered_page = false;
                 input_happened = false;
                 lcd.clear();
-                lcd.printf("Alarm M(A1),En(A2),Dis(A3)");
+                lcd.printf("Alarm"); //Mute(A1),Enable(A2),Disable(A3)
                 lcd.setCursor(0, 1);
                 if(alarm.alarm_state == "going") {
                     lcd.clear();
@@ -284,14 +298,8 @@ public:
 };
 
 int main() {
-
-    //std::string result = nu.send_get_request("rss.cnn.com", "/rss/cnn_latest.rss");
-    
-    //cout << extractTitle(result.c_str()) << endl;
-
-    //TestPage tp;
-    //AnotherPage ap;
-    page_controller.add_page(static_cast<Page*>(new SettAlarm));
+    page_controller.add_page(static_cast<Page*>(new dateTime));
+    page_controller.add_page(static_cast<Page*>(new SetAlarm));
     page_controller.add_page(static_cast<Page*>(new AlarmConfig));
     page_controller.add_page(static_cast<Page*>(new AnotherPage));
     page_controller.add_page(static_cast<Page*>(new NewsPage));
@@ -311,13 +319,10 @@ int main() {
     buttonSubtract.rise(&SubtractTime);
     buttonEnter.rise(&EnterValue);
 
-    
-    // page_controller.display(0);
-    
+        
     static_cast<Page*>(new Boot)->display();
 
-    while(1) {
-        // Check if the button is pressed
+    while(1) {       // Check if the button is pressed
         if(!buttonPage) {
             // Button is pressed, change the state and call the corresponding function
             page_controller.display_next();
@@ -329,8 +334,8 @@ int main() {
 }
 
 
-void alarmOff() {
-    while (true) {
+void alarmOff() {   //Checks time in seperate thread
+    while (true) {  //gets current hour and minute
         time_t seconds = time(NULL);
         char buffer[32];
         strftime(buffer, 32, "%H", localtime(&seconds));
@@ -352,20 +357,20 @@ void alarmOff() {
                     soundUntil.minutes -= 60;
                 }
                 alarm.alarm_state = "going";
-                page_controller.display(1);
+                page_controller.display(SetAlarmDisplaynumber+1);
             }
         }
-        else if (alarm.alarm_state == "snooze") {
-            if(snoozeIsHit == true) {
-                snoozeIsHit = false;
+        else if (alarm.alarm_state == "snooze") {   //Sets alarm to go off in 5 min
+            if(snoozeIsHit == true) {   //Ensures this code runs only once
+                snoozeIsHit = false; 
                 time_t seconds = time(NULL);
                 soundUntil.hours = current_rtc_hour;
-                soundUntil.minutes = current_rtc_minute + 1;
+                soundUntil.minutes = current_rtc_minute + 5;
                 if(current_rtc_minute > 59) {
                     current_rtc_hour++;
                     current_rtc_minute -= 60;
                 }
-            }
+            }   //Checks if 5 minutes has passed
             if(current_rtc_hour == soundUntil.hours && current_rtc_minute == soundUntil.minutes) {
                 soundUntil.hours = current_rtc_hour;
                 soundUntil.minutes = current_rtc_minute + 10;
@@ -374,14 +379,14 @@ void alarmOff() {
                     current_rtc_minute -= 60;
                 }
                 alarm.alarm_state = "going";
-                page_controller.display(1);
+                page_controller.display(SetAlarmDisplaynumber+1);
             }
         }
         else if(alarm.alarm_state == "mute") {
             if(current_rtc_hour == alarm.hours && current_rtc_minute == alarm.minutes) {     //Check if the alarm will go off
                 unmute = true;
             }
-            if(unmute) {
+            if(unmute) { //Waits for the minute to pass before activating the alarm
                 if(alarm.minutes == 59) {
                     if(current_rtc_hour == alarm.hours && current_rtc_minute == 0) {
                         alarm.alarm_state = "active";
@@ -398,7 +403,7 @@ void alarmOff() {
     }
 }
 
-void alarm_melody() {        //if alarm in state 'going' play melody
+void alarm_melody() {        //checks if alarm in state 'going' play melody , runs in seperate thread
     while(1) {
         if(alarm.alarm_state == "going") {
             const int notes[] = {659, 622, 659, 622, 659, 494, 587, 523, 440};
