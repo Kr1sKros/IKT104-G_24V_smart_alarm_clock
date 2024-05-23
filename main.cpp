@@ -58,7 +58,7 @@ Thread play_melody;
 int current_time_setter = 0;
 int set_hours = 0;
 int set_minutes = 0;
-int SetAlarmDisplaynumber;
+int DefaultDisplaynumber;
 bool input_happened = false;
 bool unmute = false;
 bool snoozeIsHit = false;
@@ -129,19 +129,38 @@ public:
 // Page that shows weekday, date, month and time definition
 class dateTime : public Page {
 public:
-    void display() override { 
-        while (true) {
+    void display() override { //Enable(A1), Mute(A2), Disable(A3)
+        DefaultDisplaynumber = page_controller.get_current_page();  
+        bool entered_page = true;
+        while(1) {
+            lcd.clear();
             time_t seconds = time(NULL);
             char currentTime[32];
             std::strftime(currentTime, sizeof(currentTime), "%a %d %B %H:%M", localtime(&seconds));
-            lcd.clear();
             lcd.printf(currentTime);
-
-            ThisThread::sleep_for(5s); // Update the display every 5 seconds
+            lcd.setCursor(0, 1);
+            if(strcmp(alarm.alarm_state.c_str(), "going") == 0) {
+                lcd.printf("Press A1 to snooze");
+            }
+            else if(strcmp(alarm.alarm_state.c_str(), "active") == 0) {
+                lcd.printf("Alarm (A) %i:%i", alarm.hours, alarm.minutes);
+            }
+            else if(strcmp(alarm.alarm_state.c_str(), "mute") == 0) {
+                lcd.printf("Alarm %i:%i", alarm.hours, alarm.minutes);
+            }
+            else if(strcmp(alarm.alarm_state.c_str(), "snooze") == 0) {
+                lcd.printf("Alarm (S) %i:%i", alarm.hours, alarm.minutes);
+            }
+            if(input_happened || entered_page) {
+                entered_page = false;
+                input_happened = false;
+            }
+            else {
+                ThisThread::sleep_for(1s); // Update the display every 5 seconds
+            }
         }
     }
 };
-
 // Page that allows user to set alarm definition
 class SetAlarm : public Page {
 public:
@@ -478,11 +497,11 @@ int main() {
 void AddTime() 
 {
     input_happened = true;
-    if(page_controller.get_current_page() == SetAlarmDisplaynumber) {
+    if(page_controller.get_current_page() == DefaultDisplaynumber+1) {
         if(current_time_setter == 0) set_hours++;
         else if (current_time_setter == 1) set_minutes++;
     }
-    else if(page_controller.get_current_page() == SetAlarmDisplaynumber+1) {
+    else if(page_controller.get_current_page() == DefaultDisplaynumber) {
         if(strcmp(alarm.alarm_state.c_str(), "going") == 0) {
             alarm.alarm_state = "snooze";
             snoozeIsHit = true;
@@ -494,7 +513,7 @@ void AddTime()
 void SubtractTime() 
 {
     input_happened = true;
-    if(page_controller.get_current_page() == SetAlarmDisplaynumber) {
+    if(page_controller.get_current_page() == DefaultDisplaynumber+1) {
         if(current_time_setter == 0) {
             if(set_hours-1 < 0) set_hours=23;
             else set_hours--;
@@ -504,7 +523,7 @@ void SubtractTime()
             else set_minutes--;
         }
     }
-    else if(page_controller.get_current_page() == SetAlarmDisplaynumber+1) {
+    else if(page_controller.get_current_page() == DefaultDisplaynumber) {
         if(strcmp(alarm.alarm_state.c_str(), "going") != 0)
             alarm.alarm_state = "mute";
     }
@@ -512,7 +531,7 @@ void SubtractTime()
 void EnterValue() 
 {
     input_happened = true;
-    if(page_controller.get_current_page() == SetAlarmDisplaynumber) {
+    if(page_controller.get_current_page() == DefaultDisplaynumber+1) {
         current_time_setter++;
         if (current_time_setter == 2) {
             alarm.minutes = set_minutes % 60;
@@ -520,7 +539,7 @@ void EnterValue()
             alarm.alarm_state = "active";
         }
     }
-    else if(page_controller.get_current_page() == SetAlarmDisplaynumber+1) {
+    else if(page_controller.get_current_page() == DefaultDisplaynumber) {
         alarm.alarm_state = "deactive";
     }
 }
@@ -548,7 +567,7 @@ void alarmOff() {   //Checks time in separate thread
                     soundUntil.minutes -= 60;
                 }
                 alarm.alarm_state = "going";
-                page_controller.display(SetAlarmDisplaynumber+1);
+                page_controller.display(DefaultDisplaynumber);
             }
         }
         else if (strcmp(alarm.alarm_state.c_str(), "snooze") == 0) {   //Sets alarm to go off in 5 min
@@ -569,7 +588,7 @@ void alarmOff() {   //Checks time in separate thread
                     current_rtc_minute -= 60;
                 }
                 alarm.alarm_state = "going";
-                page_controller.display(SetAlarmDisplaynumber);
+                page_controller.display(DefaultDisplaynumber);
             }
         }
         else if(strcmp(alarm.alarm_state.c_str(), "mute") == 0) {
