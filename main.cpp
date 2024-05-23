@@ -81,7 +81,7 @@ public:
         lcd.clear();
         lcd.printf("Starting up...");
 
-        nlohmann::json jsonData = nu.send_https_request("api.ipgeolocation.io", "/ipgeo?apiKey=21362db2c65e466e9e83a84310508f0c", geolocation_cert);
+        nlohmann::json jsonData = nu.send_https_request("api.ipgeolocation.io", "/ipgeo?apiKey=6f5e9eb73e404705bf04d4c161c239e2", geolocation_cert);
 
         time_t currentEpochTime = jsonData["time_zone"]["current_time_unix"];
         std::string latStr = jsonData["latitude"].get<std::string>();
