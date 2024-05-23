@@ -73,13 +73,12 @@ void AddTime()
         else if (current_time_setter == 1) set_minutes++;
     }
     else if(page_controller.get_current_page() == SetAlarmDisplaynumber+1) {
-        if(alarm.alarm_state == "going") {
+        if(strcmp(alarm.alarm_state.c_str(), "going") == 0) {
             alarm.alarm_state = "snooze";
             snoozeIsHit = true;
         }
-        else if(alarm.alarm_state == "active"){
-                alarm.alarm_state = "mute";
-        }
+        else if(strcmp(alarm.alarm_state.c_str(), "deactive") == 0) 
+            alarm.alarm_state = "active";
     }
 }
 void SubtractTime() 
@@ -87,17 +86,17 @@ void SubtractTime()
     input_happened = true;
     if(page_controller.get_current_page() == SetAlarmDisplaynumber) {
         if(current_time_setter == 0) {
-            if(set_hours <= 0) set_hours=0;
+            if(set_hours-1 < 0) set_hours=23;
             else set_hours--;
         }
         else if (current_time_setter == 1) {
-            if(set_minutes <= 0) set_minutes=0;
+            if(set_minutes-1 < 0) set_minutes=59;
             else set_minutes--;
         }
     }
     else if(page_controller.get_current_page() == SetAlarmDisplaynumber+1) {
-        if(alarm.alarm_state == "deactive")
-        alarm.alarm_state = "active";
+        if(strcmp(alarm.alarm_state.c_str(), "going") != 0)
+            alarm.alarm_state = "mute";
     }
 }
 void EnterValue() 
@@ -115,7 +114,6 @@ void EnterValue()
         alarm.alarm_state = "deactive";
     }
 }
-
 // Page definitions. Each page inherits from Page class that runs in a seperate thread with the help of the page controller.
 // Boot page definition. This page runs before the 'main program'
 class Boot : public Page {
@@ -220,7 +218,7 @@ public:
 };
 
 // This page allows the user to change the state of the alarm
-class AlarmConfig : public Page {
+class AlarmConfig : public Page {       //active, going, snooze, mute, deactive
 public:
     void display() override {
         bool entered_page = true;
@@ -231,29 +229,25 @@ public:
                 lcd.clear();
                 lcd.printf("Alarm"); //Mute(A1),Enable(A2),Disable(A3)
                 lcd.setCursor(0, 1);
-                if(alarm.alarm_state == "going") {
+                if(strcmp(alarm.alarm_state.c_str(), "going") == 0) {
                     lcd.clear();
                     lcd.printf("Alarm active:");
                     lcd.setCursor(0, 1);
                     lcd.printf("Press A1 to snooze");
                 }
-                else if(alarm.alarm_state == "active") {
+                else if(strcmp(alarm.alarm_state.c_str(), "active") == 0) {
                     lcd.printf("Alarm (A) %i:%i", alarm.hours, alarm.minutes);
                 }
-                else if(alarm.alarm_state == "mute") {
+                else if(strcmp(alarm.alarm_state.c_str(), "mute") == 0) {
                     lcd.printf("Alarm %i:%i", alarm.hours, alarm.minutes);
                 }
-                else if(alarm.alarm_state == "snooze") {
+                else if(strcmp(alarm.alarm_state.c_str(), "snooze") == 0) {
                     lcd.printf("Alarm (S) %i:%i", alarm.hours, alarm.minutes);
-                }
-                else if(alarm.alarm_state == "mute") {
-                    lcd.printf("Alarm %i:%i", alarm.hours, alarm.minutes);
                 }
             }
         }
     }
 };
-
 // Definition for the page displaying temperature and humidity
 class AnotherPage : public Page {
 public:
@@ -353,12 +347,12 @@ void alarmOff() {   //Checks time in seperate thread
         strftime(buffer, 32, "%M", localtime(&seconds));
         int current_rtc_minute = std::stoi(buffer);
 
-        if(alarm.alarm_state == "going") {  //Check if alarm has gone off for 10 min
+        if(strcmp(alarm.alarm_state.c_str(), "going") == 0) {  //Check if alarm has gone off for 10 min
             if(current_rtc_hour == soundUntil.hours && current_rtc_minute == soundUntil.minutes) {
                 alarm.alarm_state = "active";
             }
         }     
-        else if(alarm.alarm_state == "active") {        //Check if the alarm will go off
+        else if(strcmp(alarm.alarm_state.c_str(), "active") == 0) {        //Check if the alarm will go off
             if(current_rtc_hour == alarm.hours && current_rtc_minute == alarm.minutes) {     
                 soundUntil.hours = alarm.hours; //Sets up the 10 min timer the sound will play to
                 soundUntil.minutes = alarm.minutes + 10;
@@ -370,18 +364,17 @@ void alarmOff() {   //Checks time in seperate thread
                 page_controller.display(SetAlarmDisplaynumber+1);
             }
         }
-        else if (alarm.alarm_state == "snooze") {   //Sets alarm to go off in 5 min
+        else if (strcmp(alarm.alarm_state.c_str(), "snooze") == 0) {   //Sets alarm to go off in 5 min
             if(snoozeIsHit == true) {   //Ensures this code runs only once
                 snoozeIsHit = false; 
-                time_t seconds = time(NULL);
                 soundUntil.hours = current_rtc_hour;
                 soundUntil.minutes = current_rtc_minute + 5;
                 if(current_rtc_minute > 59) {
                     current_rtc_hour++;
                     current_rtc_minute -= 60;
                 }
-            }   //Checks if 5 minutes has passed
-            if(current_rtc_hour == soundUntil.hours && current_rtc_minute == soundUntil.minutes) {
+            }   
+            if(current_rtc_hour == soundUntil.hours && current_rtc_minute == soundUntil.minutes) { //Checks if 5 minutes has passed
                 soundUntil.hours = current_rtc_hour;
                 soundUntil.minutes = current_rtc_minute + 10;
                 if(current_rtc_minute > 59) {
@@ -389,10 +382,10 @@ void alarmOff() {   //Checks time in seperate thread
                     current_rtc_minute -= 60;
                 }
                 alarm.alarm_state = "going";
-                page_controller.display(SetAlarmDisplaynumber+1);
+                page_controller.display(SetAlarmDisplaynumber);
             }
         }
-        else if(alarm.alarm_state == "mute") {
+        else if(strcmp(alarm.alarm_state.c_str(), "mute") == 0) {
             if(current_rtc_hour == alarm.hours && current_rtc_minute == alarm.minutes) {     //Check if the alarm will go off
                 unmute = true;
             }
@@ -415,9 +408,9 @@ void alarmOff() {   //Checks time in seperate thread
 
 void alarm_melody() {        //checks if alarm in state 'going' play melody , runs in seperate thread
     while(1) {
-        if(alarm.alarm_state == "going") {
-            const int notes[] = {659, 622, 659, 622, 659, 494, 587, 523, 440};
-            const int durations[] = {250, 250, 250, 250, 250, 250, 250, 250, 500};
+        if(strcmp(alarm.alarm_state.c_str(), "going") == 0) {
+            const int notes[] =     {440, 494, 587, 494, 740, 1, 740, 660,  440, 494, 587, 494, 659, 1, 659, 587, 554, 494};
+            const int durations[] = {250, 250, 250, 250, 500, 1, 500, 1000, 250, 250, 250, 250, 500, 1, 500, 500, 250, 500};
             for (int i = 0; i < sizeof(notes) / sizeof(notes[0]); i++) {        //Soundloop
                 if(alarm.alarm_state != "going") break;
                     buzzer.period(1.0 / notes[i]); 
