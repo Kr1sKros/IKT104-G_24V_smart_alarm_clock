@@ -77,9 +77,8 @@ public:
         // Calculate the number of iterations needed for scrolling
         int iterations = text.length() - 16;
 
-        // Infinite loop to keep scrolling indefinitely
-        while (true) {
-            // Display the prefix if required
+        for (int i = 0; i <= 2; i++) {
+           // Display the prefix if required
             if (display_prefix) {
                 lcd->setCursor(0, row);
                 lcd->printf("Top News CNN:");
@@ -120,7 +119,6 @@ public:
             }
 
             ThisThread::sleep_for(2s);
-
         }
     }
 };
