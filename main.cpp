@@ -37,9 +37,13 @@ PwmOut buzzer(D13); //D13 eller PA_5
 PageController page_controller;
 net_util nu;
 
-// Users coordinates definition for later use
+// Global variables for weather API
 float latitude;
 float longitude;
+char city_name[17] = {0}; // Max 16 characters + null terminator
+bool checkCity = false;
+
+
 
 //Define the alarm and alarm struct
 struct alarm_t {
@@ -198,6 +202,7 @@ public:
     }
 };
 
+
 // Definition for the page displaying temperature and humidity
 class TempHum : public Page {
 public:
@@ -270,8 +275,6 @@ private:
                 pc.read(&c, 1); // Read a character from the serial input
                 if (c == '\r' || c == '\n') {
                     // Finish typing latitude on Enter key press
-                    lat_str[lat_index] = '\0'; // Null terminate the string
-                    latitude = atof(lat_str); // Convert to float
                     printf("\nLatitude entered: %.6f\n", latitude);
 
                     // Now ask for Longitude
@@ -287,9 +290,13 @@ private:
                             pc.read(&c, 1); // Read a character from the serial input
                             if (c == '\r' || c == '\n') {
                                 // Finish typing longitude on Enter key press
+                                lat_str[lat_index] = '\0'; // Null terminate the string
                                 lon_str[lon_index] = '\0'; // Null terminate the string
+                                latitude = atof(lat_str); // Convert to float
                                 longitude = atof(lon_str); // Convert to float
                                 printf("\nLongitude entered: %.6f\n", longitude);
+
+                                checkCity = false;
 
                                 // Display entered Latitude and Longitude
                                 lcd.clear();
@@ -343,7 +350,6 @@ private:
         lcd.setCursor(0, 0);  // Set cursor to the first row
         lcd.printf("Enter City name:");
 
-        char city_name[17] = {0}; // Max 16 characters + null terminator
         int city_index = 0;
 
         while (1) {
@@ -382,6 +388,7 @@ private:
         lcd.setCursor(0, 1);
         lcd.printf("%s", city_name);
         printf("\nDisplaying city name: %s\n", city_name); // Debugging output
+        checkCity = true;
         ThisThread::sleep_for(5s); // Display the city name for 5 seconds
     }
 };
@@ -396,8 +403,18 @@ public:
         lcd.printf("Fetching weather");
         lcd.setCursor(0, 1);
         lcd.printf("data...");
+
         char weatherRequest[256];
-        sprintf(weatherRequest, "/data/2.5/weather?lat=%f&lon=%f&appid=79c12506d304ebe5ae95df675b419522", latitude, longitude);
+
+        if (!checkCity)
+        {
+            sprintf(weatherRequest, "/data/2.5/weather?lat=%f&lon=%f&appid=79c12506d304ebe5ae95df675b419522", latitude, longitude);
+        }
+        else 
+        {
+            sprintf(weatherRequest, "/data/2.5/weather?q=%s&appid=79c12506d304ebe5ae95df675b419522", city_name);
+        }
+
         nlohmann::json jsonData = nu.send_https_request("api.openweathermap.org", weatherRequest, weather_cert);
         std::string weatherStr = jsonData["weather"][0]["main"].get<std::string>();
         const char *weather = weatherStr.c_str();
