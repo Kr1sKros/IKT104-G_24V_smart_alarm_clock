@@ -14,40 +14,65 @@
 #include "mbed.h"
 #include "DFRobot_RGBLCD1602.h"
 
+#include <iostream>
+
 class text_utils {
 public:
+
     static std::string extractTitle(const char* xml) {
-        const char* startTag = "<description><![CDATA[";
-        const char* endTag = "]]></description>";
+        const char* startTag = "<title><![CDATA[";
+        const char* endTag = "]]></title>";
+        const int maxDescriptions = 3;
+        
+        std::string result;
+        int count = 0;
 
-        // Find the position of the first occurrence of the start tag
-        const char* startPos = strstr(xml, startTag);
-        if (!startPos) {
-            return ""; // Title start tag not found
+        const char* startPos = xml;
+        const char* endPos = nullptr;
+
+        // Skip the first description
+        startPos = strstr(startPos, startTag);
+        if (startPos) {
+            startPos += strlen(startTag); // Move startPos to the beginning of the description text
+            endPos = strstr(startPos, endTag);
+            if (endPos) {
+                // Move startPos past the first end tag
+                startPos = endPos + strlen(endTag);
+            }
         }
 
-        // Find the position of the end tag
-        const char* endPos = strstr(startPos, endTag);
-        if (!endPos) {
-            return ""; // Title end tag not found
+        while (count < maxDescriptions) {
+            // Find the position of the start tag
+            startPos = strstr(startPos, startTag);
+            if (!startPos) {
+                cout << "end of buffer \n";
+                break; // No more descriptions found
+            }
+            startPos += strlen(startTag); // Move startPos to the beginning of the description text
+
+            // Find the position of the end tag
+            endPos = strstr(startPos, endTag);
+            if (!endPos) {
+                break; // End tag not found
+            }
+
+            // Extract the description text between startPos and endPos
+            if (!result.empty()) {
+                result += " || "; // Add a couple of spaces between descriptions
+            }
+            result += std::string(startPos, endPos - startPos);
+
+            // Move startPos past the current end tag for the next iteration
+            startPos = endPos + strlen(endTag);
+
+            count++;
         }
 
-        // Find the position of the second occurrence of the start tag
-        startPos = strstr(endPos, startTag);
-        if (!startPos) {
-            return ""; // Second title start tag not found
-        }
-        startPos += strlen(startTag); // Move startPos to the beginning of the title text
-
-        // Find the position of the end tag
-        endPos = strstr(startPos, endTag);
-        if (!endPos) {
-            return ""; // Title end tag not found
-        }
-
-        // Extract the title text between startPos and endPos
-        return std::string(startPos, endPos - startPos);
+        std::cout << result << std::endl;
+        return result;
     }
+
+
 
     static void printScrolling(DFRobot_RGBLCD1602* lcd, const std::string& text, bool display_prefix = false, int delay_ms = 260, uint8_t row = 0) {
         // Calculate the number of iterations needed for scrolling

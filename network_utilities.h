@@ -128,7 +128,7 @@ public:
 
         std::cout << "Finished sending message. moving over to other matters 😈\n";
 
-        static constexpr size_t HTTP_RESPONSE_BUF_SIZE = 4000;
+        static constexpr size_t HTTP_RESPONSE_BUF_SIZE = 4000 * 4;
 
         static char http_response[HTTP_RESPONSE_BUF_SIZE + 1];
 
@@ -169,6 +169,8 @@ public:
 
         std::string response_string(http_response);
         
+        // cout << response_string << endl;
+
         return response_string;
     }
 
