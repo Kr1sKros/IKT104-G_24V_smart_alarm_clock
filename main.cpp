@@ -33,7 +33,7 @@ InterruptIn buttonEnter(A3, PullUp);
 // Define buzzer
 PwmOut buzzer(D13); //D13 eller PA_5
 
-// Define Page controller object from graphics.h This object controlls which page is displayed and page switching
+// Define Page controller object from graphics.h This object controls which page is displayed and page switching
 PageController page_controller;
 net_util nu;
 
@@ -48,7 +48,7 @@ struct alarm_t {
     std::string alarm_state; //active, going, snooze, mute, deactive
 };
 alarm_t alarm;
-alarm_t soundUntil; //Makes it so that the alarm plays for 10 minuttes
+alarm_t soundUntil; //Makes it so that the alarm plays for 10 minutes
 
 //Define threads used by alarm
 Thread check_alarm;
@@ -63,6 +63,9 @@ bool input_happened = false;
 bool unmute = false;
 bool snoozeIsHit = false;
 
+// Define Serial object for PC communication
+BufferedSerial pc(USBTX, USBRX, 115200);
+
 // Functions
 void alarmOff();
 void alarm_melody();
@@ -70,8 +73,7 @@ void AddTime();
 void SubtractTime();
 void EnterValue();
 
-
-// Page definitions. Each page inherits from Page class that runs in a seperate thread with the help of the page controller.
+// Page definitions. Each page inherits from Page class that runs in a separate thread with the help of the page controller.
 // Boot page definition. This page runs before the 'main program'
 class Boot : public Page {
 public:
@@ -127,12 +129,16 @@ public:
 // Page that shows weekday, date, month and time definition
 class dateTime : public Page {
 public:
-    void display() override { //Displays weekday, date, month and time
-        time_t seconds = time(NULL);
-        char currentTime[32];
-        std::strftime(currentTime, sizeof(currentTime), "%a %d %B %H:%M", localtime(&seconds));
-        lcd.clear();
-        lcd.printf(currentTime);
+    void display() override { 
+        while (true) {
+            time_t seconds = time(NULL);
+            char currentTime[32];
+            std::strftime(currentTime, sizeof(currentTime), "%a %d %B %H:%M", localtime(&seconds));
+            lcd.clear();
+            lcd.printf(currentTime);
+
+            ThisThread::sleep_for(5s); // Update the display every 5 seconds
+        }
     }
 };
 
@@ -205,8 +211,9 @@ public:
         }
     }
 };
+
 // Definition for the page displaying temperature and humidity
-class AnotherPage : public Page {
+class TempHum : public Page {
 public:
     void display() override {
         float temperature, humidity;
@@ -236,6 +243,176 @@ public:
     }
 };
 
+// Include the new SearchCity class here
+class SearchCity : public Page {
+public:
+    void display() override {
+        lcd.clear();
+        lcd.setCursor(0, 0);  // Set cursor to the first row
+        lcd.printf("A1: Lat/Lon");
+        lcd.setCursor(0, 1);
+        lcd.printf("A2: City Name");
+
+        while (1) {
+            if (!buttonAdd) {
+                lcd.clear();
+                enterCoordinates();
+                break;
+            }
+            if (!buttonSubtract) {
+                lcd.clear();
+                enterCityName();
+                break;
+            }
+
+            ThisThread::sleep_for(100ms); // Add a small delay for debouncing
+        }
+    }
+
+private:
+    void enterCoordinates() {
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.printf("Enter Latitude:");
+
+        char lat_str[11] = {0}; // Max 10 characters + null terminator
+        int lat_index = 0;
+
+        while (1) {
+            if (pc.readable()) {
+                char c;
+                pc.read(&c, 1); // Read a character from the serial input
+                if (c == '\r' || c == '\n') {
+                    // Finish typing latitude on Enter key press
+                    lat_str[lat_index] = '\0'; // Null terminate the string
+                    latitude = atof(lat_str); // Convert to float
+                    printf("\nLatitude entered: %.6f\n", latitude);
+
+                    // Now ask for Longitude
+                    lcd.clear();
+                    lcd.setCursor(0, 0);
+                    lcd.printf("Enter Longitude:");
+                    char lon_str[11] = {0}; // Max 10 characters + null terminator
+                    int lon_index = 0;
+
+                    while (1) {
+                        if (pc.readable()) {
+                            char c;
+                            pc.read(&c, 1); // Read a character from the serial input
+                            if (c == '\r' || c == '\n') {
+                                // Finish typing longitude on Enter key press
+                                lon_str[lon_index] = '\0'; // Null terminate the string
+                                longitude = atof(lon_str); // Convert to float
+                                printf("\nLongitude entered: %.6f\n", longitude);
+
+                                // Display entered Latitude and Longitude
+                                lcd.clear();
+                                lcd.setCursor(0, 0);
+                                lcd.printf("Lat: %.6f", latitude);
+                                lcd.setCursor(0, 1);
+                                lcd.printf("Lon: %.6f", longitude);
+                                printf("Displaying Lat: %.6f, Lon: %.6f\n", latitude, longitude);
+                                ThisThread::sleep_for(5s); // Display the coordinates for 5 seconds
+                                return; // Exit the method
+                            } else if (c == '\b' || c == 127) {
+                                // Handle backspace
+                                if (lon_index > 0) {
+                                    lon_index--;
+                                    lon_str[lon_index] = ' ';
+                                }
+                            } else if (lon_index < 10 && ((c >= '0' && c <= '9') || c == '.')) {
+                                // Add character to longitude string if it's a digit or a dot
+                                lon_str[lon_index++] = c;
+                            }
+                            // Echo the input to the display and console
+                            lcd.setCursor(0, 1);
+                            lcd.printf("%-10s", lon_str); // Clear the rest of the line
+                            printf("\rLongitude: %-10s", lon_str);
+                        }
+
+                        ThisThread::sleep_for(100ms); // Add a small delay for debouncing
+                    }
+                } else if (c == '\b' || c == 127) {
+                    // Handle backspace
+                    if (lat_index > 0) {
+                        lat_index--;
+                        lat_str[lat_index] = ' ';
+                    }
+                } else if (lat_index < 10 && ((c >= '0' && c <= '9') || c == '.')) {
+                    // Add character to latitude string if it's a digit or a dot
+                    lat_str[lat_index++] = c;
+                }
+                // Echo the input to the display and console
+                lcd.setCursor(0, 1);
+                lcd.printf("%-10s", lat_str); // Clear the rest of the line
+                printf("\rLatitude: %-10s", lat_str);
+            }
+
+            ThisThread::sleep_for(100ms); // Add a small delay for debouncing
+        }
+    }
+
+    void enterCityName() {
+        lcd.clear();
+        lcd.setCursor(0, 0);  // Set cursor to the first row
+        lcd.printf("Enter City name:");
+
+        char city_name[17] = {0}; // Max 16 characters + null terminator
+        int city_index = 0;
+
+        while (1) {
+            if (pc.readable()) {
+                char c;
+                pc.read(&c, 1); // Read a character from the serial input
+                if (c == '\r' || c == '\n') {
+                    // Finish typing on Enter key press
+                    city_name[city_index] = '\0'; // Null terminate the string
+                    displayCityName(city_name);
+                    break;
+                } else if (c == '\b' || c == 127) {
+                    // Handle backspace
+                    if (city_index > 0) {
+                        city_index--;
+                        city_name[city_index] = ' ';
+                    }
+                } else if (city_index < 16 && c >= 32 && c <= 126) {
+                    // Add character to city name if within printable ASCII range
+                    city_name[city_index++] = c;
+                }
+                // Echo the input to the display and console
+                lcd.setCursor(0, 1);
+                lcd.printf("%-16s", city_name); // Clear the rest of the line
+                printf("\rCity Name: %-16s", city_name);
+            }
+
+            ThisThread::sleep_for(100ms); // Add a small delay for debouncing
+        }
+    }
+
+    void displayCityName(const char* city_name) {
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.printf("City entered:");
+        lcd.setCursor(0, 1);
+        lcd.printf("%s", city_name);
+        printf("\nDisplaying city name: %s\n", city_name); // Debugging output
+        ThisThread::sleep_for(5s); // Display the city name for 5 seconds
+    }
+};
+
+
+
+class Weather : public Page {
+public:
+    void display() override {
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.printf("Weather: very bad");
+    }
+};
+
+
+
 // Definition for page showing the top three news articles from CNN rss feed, http://rss.cnn.com/rss/cnn_latest.rss
 class NewsPage : public Page {
 public:
@@ -254,13 +431,16 @@ public:
     }
 };
 
+
 // program main
 int main() {
     // Add all pages to page controller. The pages will be displayed in the order that they are added.
     page_controller.add_page(static_cast<Page*>(new dateTime));
     page_controller.add_page(static_cast<Page*>(new SetAlarm));
     page_controller.add_page(static_cast<Page*>(new AlarmConfig));
-    page_controller.add_page(static_cast<Page*>(new AnotherPage));
+    page_controller.add_page(static_cast<Page*>(new TempHum));
+    page_controller.add_page(static_cast<Page*>(new SearchCity)); 
+    page_controller.add_page(static_cast<Page*>(new Weather)); 
     page_controller.add_page(static_cast<Page*>(new NewsPage));
 
     // initialize hts sensor
@@ -279,7 +459,6 @@ int main() {
     buttonSubtract.rise(&SubtractTime);
     buttonEnter.rise(&EnterValue);
 
-        
     static_cast<Page*>(new Boot)->display();
 
     // Program mainloop
@@ -294,7 +473,6 @@ int main() {
         ThisThread::sleep_for(100ms); // Add a small delay to debounce the button
     }
 }
-
 
 //Functions
 void AddTime() 
@@ -347,7 +525,7 @@ void EnterValue()
     }
 }
 
-void alarmOff() {   //Checks time in seperate thread
+void alarmOff() {   //Checks time in separate thread
     while (true) {  //gets current hour and minute
         time_t seconds = time(NULL);
         char buffer[32];
@@ -415,7 +593,7 @@ void alarmOff() {   //Checks time in seperate thread
     }
 }
 
-void alarm_melody() {        //checks if alarm in state 'going' play melody , runs in seperate thread
+void alarm_melody() {        //checks if alarm in state 'going' play melody , runs in separate thread
     while(1) {
         if(strcmp(alarm.alarm_state.c_str(), "going") == 0) {
             const int notes[] =     {440, 494, 587, 494, 740, 1, 740, 660,  440, 494, 587, 494, 659, 1, 659, 587, 554, 494};
@@ -424,7 +602,7 @@ void alarm_melody() {        //checks if alarm in state 'going' play melody , ru
                 if(alarm.alarm_state != "going") break;
                     buzzer.period(1.0 / notes[i]); 
                     buzzer = 0.5; 
-            ThisThread::sleep_for(durations[i]);   
+                ThisThread::sleep_for(durations[i]);   
             }      
         }
         else {
