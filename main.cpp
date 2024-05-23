@@ -283,13 +283,13 @@ int main() {
 
     while(1) {
         // Check if the button is pressed
-        if(!button) {
+        if(!buttonPage) {
             // Button is pressed, change the state and call the corresponding function
             if(OnPageSetAlarm) OnPageSetAlarm = false;
             if(OnPageAlarmConfig) OnPageAlarmConfig = false;
             page_controller.display_next();
 
-            while (!button) {};
+            while (!buttonPage) {};
         }
         ThisThread::sleep_for(100ms); // Add a small delay to debounce the button
     }
