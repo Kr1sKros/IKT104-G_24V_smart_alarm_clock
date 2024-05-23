@@ -300,8 +300,6 @@ void alarmOff() {
     while (true) {
         time_t seconds = time(NULL);
         char buffer[32];
-        strftime(buffer, 32, "%H:%M:%S", localtime(&seconds));
-        printf("Current time = %s\n", buffer);
         strftime(buffer, 32, "%H", localtime(&seconds));
         int current_rtc_hour = std::stoi(buffer);
         printf("hour %i", current_rtc_hour);
