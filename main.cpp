@@ -33,6 +33,10 @@ PwmOut buzzer(D13); //D13 eller PA_5
 PageController page_controller;
 net_util nu;
 
+// Users coords for later use
+float latitude;
+float longitude;
+
 //Define the alarm and alarm struct
 struct alarm_t {
     int hours;
@@ -109,25 +113,57 @@ class Boot : public Page {
 public:
     void display() override {
         lcd.clear();
+        lcd.printf("Starting up...");
+
+        nlohmann::json jsonData = nu.send_https_request("api.ipgeolocation.io", "/ipgeo?apiKey=21362db2c65e466e9e83a84310508f0c", geolocation_cert);
+
+        time_t currentEpochTime = jsonData["time_zone"]["current_time_unix"];
+        std::string latStr = jsonData["latitude"].get<std::string>();
+        std::string lonStr = jsonData["longitude"].get<std::string>();
+        std::string cityStr = jsonData["city"].get<std::string>();
+        std::string dateTimeStr = jsonData["time_zone"]["current_time"].get<std::string>();
+
+        int fixedEpochTime = jsonData["time_zone"]["offset_with_dst"].get<int>();
+        fixedEpochTime *= 3600;
+        currentEpochTime += fixedEpochTime;
+        set_time(currentEpochTime);
+        char tempBuffer[20];
+        snprintf(tempBuffer, sizeof(tempBuffer), "%ld", static_cast<long>(currentEpochTime));
+
+        const char* currentEpochTimeStr = tempBuffer;
+        latitude = std::stof(latStr);
+        longitude = std::stof(lonStr);
+        const char* city = cityStr.c_str();
+
+        // Masse piss for å få rett formatering på dateTime
+        dateTimeStr = dateTimeStr.substr(0, 16);
+        std::tm tempTime = {};
+        std::stringstream stringStream(dateTimeStr);
+        stringStream >> std::get_time(&tempTime, "%Y-%m-%d %H:%M");
+        char currentTime[30];
+        std::strftime(currentTime, sizeof(currentTime), "%a %d %B %H:%M", &tempTime);
+        //std::strftime(currentTime, sizeof(currentTime), "%a %d %B %Y", &tempTime);
+
+        lcd.clear();
         lcd.printf("Unix epoch time: ");
         lcd.setCursor(0, 1);
-        lcd.printf("1234567890");
+        lcd.printf(currentEpochTimeStr);
         ThisThread::sleep_for(2s);
 
         lcd.clear();
-        lcd.printf("Lat: 58.3405");
+        lcd.printf("Lat: %f", latitude);
         lcd.setCursor(0, 1);
-        lcd.printf("Lon: 8.5934");
+        lcd.printf("Lon: %f", longitude);
         ThisThread::sleep_for(2s);
 
         lcd.clear();
         lcd.printf("City: ");
         lcd.setCursor(0, 1);
-        lcd.printf("Grimstad");
+        lcd.printf(city);
         ThisThread::sleep_for(2s);
         
         lcd.clear();
-        lcd.printf("Sun 28 Apr 13:55");
+        lcd.printf(currentTime);
     }
 };
 
