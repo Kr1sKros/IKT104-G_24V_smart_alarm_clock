@@ -168,37 +168,52 @@ public:
     // standardized method for sending requests using https
     nlohmann::json send_https_request(const char* hostname, const char* resource, const char* cert)
     {
-        TLSSocket https_socket;
+        TLSSocket *https_socket = new TLSSocket;
         const char https_request_template[] = "GET %s HTTP/1.1\r\n"
                                             "Host: %s\r\n"
                                             "Connection: close\r\n"
                                             "\r\n";
         
-        char https_request[1024];
+        static char https_request[1024];
         std::snprintf(https_request, sizeof(https_request), https_request_template, resource, hostname);
         this->socket.close();
 
-        https_socket.set_timeout(500);
-        nsapi_size_or_error_t result = https_socket.open(network);
+        https_socket->set_timeout(500);
+        nsapi_size_or_error_t result = https_socket->open(network);
 
         if (result != NSAPI_ERROR_OK)
         {
             printf("Failed to open TLS socket, error code: %d\n", result);
             return NULL;
         }
-
+        nsapi_connection_status_t connectionStatus = this->network->get_connection_status();
+        if (connectionStatus != NSAPI_STATUS_GLOBAL_UP)
+        {
+            std::cout << "Feil" << std::endl;
+            return NULL;
+        }
+        std::cout << "test 1" << std::endl;
         SocketAddress server_address;
         do {
             result = this->network->gethostbyname(hostname, &server_address);
+
             if (result != NSAPI_ERROR_OK)
             {
                 printf("Failed to get the IP address of the host, error code: %d\n", result);
             }
         }while (result != NSAPI_ERROR_OK);
 
+        std::cout << server_address.get_ip_address() << std::endl;
+
+        std::cout << "test 2" << std::endl;
+
         server_address.set_port(443);
 
-        result = https_socket.set_root_ca_cert(cert);
+        std::cout << "test 3" << std::endl;
+
+        result = https_socket->set_root_ca_cert(cert);
+
+        std::cout << "test 4" << std::endl;
 
         if (result != NSAPI_ERROR_OK)
         {
@@ -206,8 +221,11 @@ public:
             return NULL;
         }
 
-        https_socket.set_hostname(hostname);
-        result = https_socket.connect(server_address);
+        https_socket->set_hostname(hostname);
+        std::cout << "test 5" << std::endl;
+        
+        result = https_socket->connect(server_address); 
+        std::cout << "test 6" << std::endl;
 
         if (result != NSAPI_ERROR_OK)
         {
@@ -217,10 +235,11 @@ public:
 
         nsapi_size_t BytestoSend = strlen(https_request);
         nsapi_size_t sentBytes = 0;
+        std::cout << "test 7" << std::endl;
 
         while (BytestoSend > 0)
         {
-            sentBytes = https_socket.send(https_request + sentBytes, BytestoSend);
+            sentBytes = https_socket->send(https_request + sentBytes, BytestoSend);
             if (sentBytes < 0) break;
             else printf("Sent %d bytes\n", sentBytes);
 
@@ -234,15 +253,18 @@ public:
 
         printf("Request sent successfully, handling response...\n\n");
 
-        char response[2000] = {0};
+        //char response[2000] = {0};
+        static char response[2000] = {0};
         int counter = 0;
         char chunk[100] = {0};
         nsapi_size_t remainingBytes = 100;
         nsapi_size_or_error_t receivedBytes = 0;
         
+        memset(response, 0, 2000);
+
         do
         {
-            result = https_socket.recv(chunk, 100);
+            result = https_socket->recv(chunk, 100);
             for (int i = 0; i < 100; i++)
             {
                 if (chunk[i] == '\0') break;
@@ -252,7 +274,8 @@ public:
             }
         } while(result != 0);
 
-        https_socket.close();
+        https_socket->close();
+        delete https_socket;
 
         // Fjerner eventuelt drit som har sneket seg bak json-dataene
         int safetyCounter = 1000;
@@ -266,13 +289,13 @@ public:
             }
         }
 
+        std::cout << response << std::endl;
+
         char *ptr = strchr(response, '{');
         nlohmann::json jsonData = nlohmann::json::parse(ptr);
         return jsonData;
     }
 };
-
-
 
 
 #endif // NETWORK_UTILITIES_H
