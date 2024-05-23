@@ -82,7 +82,7 @@ public:
             // Display the prefix if required
             if (display_prefix) {
                 lcd->setCursor(0, row);
-                lcd->printf("Top News:");
+                lcd->printf("Top News CNN:");
             }
             ThisThread::sleep_for(2s);
 
