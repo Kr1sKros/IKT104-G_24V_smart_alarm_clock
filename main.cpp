@@ -426,7 +426,21 @@ public:
     void display() override {
         lcd.clear();
         lcd.setCursor(0, 0);
-        lcd.printf("Weather: very bad");
+        lcd.printf("Fetching weather");
+        lcd.setCursor(0, 1);
+        lcd.printf("data...");
+        char weatherRequest[256];
+        sprintf(weatherRequest, "/data/2.5/weather?lat=%f&lon=%f&appid=79c12506d304ebe5ae95df675b419522", latitude, longitude);
+        nlohmann::json jsonData = nu.send_https_request("api.openweathermap.org", weatherRequest, weather_cert);
+        std::string weatherStr = jsonData["weather"][0]["main"].get<std::string>();
+        const char *weather = weatherStr.c_str();
+        int temperature = jsonData["main"]["temp"].get<int>() - 273;
+        
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.printf(weather);
+        lcd.setCursor(0, 1);
+        lcd.printf("%d degrees", temperature);
     }
 };
 
