@@ -165,7 +165,6 @@ public:
 class SetAlarm : public Page {
 public:
     void display() override {  
-        SetAlarmDisplaynumber = page_controller.get_current_page();  
         set_hours = 0;
         set_minutes = 0;
         bool entered_page = true;
