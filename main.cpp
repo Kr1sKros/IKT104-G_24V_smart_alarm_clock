@@ -22,9 +22,9 @@ DevI2C devI2cSensor(PB_11, PB_10); // Sensor I2C bus
 HTS221Sensor hts(&devI2cSensor);
 
 // Create an LCD object
-DFRobot_RGBLCD1602 lcd(&lcdI2C);  // Create an LCD display object
+DFRobot_RGBLCD1602 lcd(&lcdI2C);
 
-// Define the button pin
+// Define the buttons in use
 DigitalIn buttonPage(A0, PullUp);
 InterruptIn buttonAdd(A1, PullUp);
 InterruptIn buttonSubtract(A2, PullUp);
@@ -33,11 +33,11 @@ InterruptIn buttonEnter(A3, PullUp);
 // Define buzzer
 PwmOut buzzer(D13); //D13 eller PA_5
 
-// Define Page controller
+// Define Page controller object from graphics.h This object controlls which page is displayed and page switching
 PageController page_controller;
 net_util nu;
 
-// Users coords for later use
+// Users coordinates definition for later use
 float latitude;
 float longitude;
 
@@ -48,9 +48,9 @@ struct alarm_t {
     std::string alarm_state; //active, going, snooze, mute, deactive
 };
 alarm_t alarm;
-alarm_t soundUntil; //Makes so the sound plays for 10 minuttes
+alarm_t soundUntil; //Makes it so that the alarm plays for 10 minuttes
 
-//Define Thread
+//Define threads used by alarm
 Thread check_alarm;
 Thread play_melody;
 
@@ -116,10 +116,8 @@ void EnterValue()
     }
 }
 
-
-// Function prototypes
-
-
+// Page definitions. Each page inherits from Page class that runs in a seperate thread with the help of the page controller.
+// Boot page definition. This page runs before the 'main program'
 class Boot : public Page {
 public:
     void display() override {
@@ -146,22 +144,21 @@ public:
         longitude = std::stof(lonStr);
         const char* city = cityStr.c_str();
 
-
-        
-
-
+        // Shows unix epoch time on boot
         lcd.clear();
         lcd.printf("Unix epoch time: ");
         lcd.setCursor(0, 1);
         lcd.printf(currentEpochTimeStr);
         ThisThread::sleep_for(2s);
 
+        // Shows coordinates on boot
         lcd.clear();
         lcd.printf("Lat: %f", latitude);
         lcd.setCursor(0, 1);
         lcd.printf("Lon: %f", longitude);
         ThisThread::sleep_for(2s);
 
+        // Shows nearest city on boot
         lcd.clear();
         lcd.printf("City: ");
         lcd.setCursor(0, 1);
@@ -172,6 +169,7 @@ public:
     }
 };
 
+// Page that shows weekday, date, month and time definition
 class dateTime : public Page {
 public:
     void display() override { //Displays weekday, date, month and time
@@ -182,6 +180,8 @@ public:
         lcd.printf(currentTime);
     }
 };
+
+// Page that allows user to set alarm definition
 class SetAlarm : public Page {
 public:
     void display() override {  
@@ -219,7 +219,8 @@ public:
     }
 };
 
-class AlarmConfig : public Page {       //active, going, snooze, mute, deactive
+// This page allows the user to change the state of the alarm
+class AlarmConfig : public Page {
 public:
     void display() override {
         bool entered_page = true;
@@ -252,6 +253,8 @@ public:
         }
     }
 };
+
+// Definition for the page displaying temperature and humidity
 class AnotherPage : public Page {
 public:
     void display() override {
@@ -281,6 +284,8 @@ public:
         }
     }
 };
+
+// Definition for page showing the top three news articles from CNN rss feed, http://rss.cnn.com/rss/cnn_latest.rss
 class NewsPage : public Page {
 public:
     void display() override {
@@ -297,13 +302,16 @@ public:
     }
 };
 
+// program main
 int main() {
+    // Add all pages to page controller. The pages will be displayed in the order that they are added.
     page_controller.add_page(static_cast<Page*>(new dateTime));
     page_controller.add_page(static_cast<Page*>(new SetAlarm));
     page_controller.add_page(static_cast<Page*>(new AlarmConfig));
     page_controller.add_page(static_cast<Page*>(new AnotherPage));
     page_controller.add_page(static_cast<Page*>(new NewsPage));
 
+    // initialize hts sensor
     hts.init(nullptr);
     hts.enable();
 
@@ -322,7 +330,9 @@ int main() {
         
     static_cast<Page*>(new Boot)->display();
 
-    while(1) {       // Check if the button is pressed
+    // Program mainloop
+    while(1) {
+        // Check if the button is pressed
         if(!buttonPage) {
             // Button is pressed, change the state and call the corresponding function
             page_controller.display_next();
