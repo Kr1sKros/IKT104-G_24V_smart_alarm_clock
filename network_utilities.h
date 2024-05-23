@@ -15,11 +15,13 @@
 #include <string>
 #include <json.hpp>
 
+// this is the master class that contains all the functions for making different requests
 class net_util {
 public:
     NetworkInterface *network = nullptr;
     TCPSocket socket;
 
+    // connects to network inside the constructor. Pretty neat.
     net_util(){
         if (this->network != nullptr){
             this->network->disconnect();
@@ -51,20 +53,9 @@ public:
         } while (result != NSAPI_ERROR_OK);
 
         cout << "succesfully connected to default network\n";
-        /*
-        do {
-        printf("Get local IP address...\n");
-        result = network->get_ip_address(&this->local_ip);
-
-        if (result != NSAPI_ERROR_OK) {
-            printf("Failed to get local IP address: %d\n", result);
-        }
-        } while (result != NSAPI_ERROR_OK);
-
-        printf("Connected to WLAN and got IP address %s\n", this->local_ip.get_ip_address());
-        */
     }
 
+    // standardized method for sending get requests using unsecured http. Used to fetch cnn news feed.
     std::string send_get_request(const char* hostname, const char* resource){
         const char http_request_template[] = "GET %s HTTP/1.1\r\n"
                                             "Host: %s\r\n"
@@ -174,6 +165,7 @@ public:
         return response_string;
     }
 
+    // standardized method for sending requests using https
     nlohmann::json send_https_request(const char* hostname, const char* resource, const char* cert)
     {
         TLSSocket https_socket;
