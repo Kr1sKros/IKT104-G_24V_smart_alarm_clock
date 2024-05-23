@@ -17,8 +17,8 @@
 class text_utils {
 public:
     static std::string extractTitle(const char* xml) {
-        const char* startTag = "<title><![CDATA[";
-        const char* endTag = "]]></title>";
+        const char* startTag = "<description><![CDATA[";
+        const char* endTag = "]]></description>";
 
         // Find the position of the first occurrence of the start tag
         const char* startPos = strstr(xml, startTag);
