@@ -56,8 +56,6 @@ int sett_hours = 0;
 int sett_minutes = 0;
 bool input_happened = false;
 bool unmute = false;
-bool OnPageSetAlarm = false;
-bool OnPageAlarmConfig = false;
 bool snoozeIsHit = false;
 
 void alarmOff();
@@ -65,11 +63,11 @@ void alarm_melody();
 void AddTime() 
 {
     input_happened = true;
-    if(OnPageSetAlarm) {
+    if(page_controller.get_current_page() == 0) {
         if(current_time_setter == 0) sett_hours++;
         else if (current_time_setter == 1) sett_minutes++;
     }
-    else if(OnPageAlarmConfig) {
+    else if(page_controller.get_current_page() == 1) {
         if(alarm.alarm_state == "going") {
             alarm.alarm_state = "snooze";
             snoozeIsHit = true;
@@ -80,11 +78,11 @@ void AddTime()
 void SubtractTime() 
 {
     input_happened = true;
-    if(OnPageSetAlarm) {
+    if(page_controller.get_current_page() == 0) {
         if(current_time_setter == 0) sett_hours--;
         else if (current_time_setter == 1) sett_minutes--;
     }
-    else if(OnPageAlarmConfig) {
+    else if(page_controller.get_current_page() == 1) {
         if(alarm.alarm_state == "deactive")
         alarm.alarm_state = "active";
     }
@@ -92,7 +90,7 @@ void SubtractTime()
 void EnterValue() 
 {
     input_happened = true;
-    if(OnPageSetAlarm) {
+    if(page_controller.get_current_page() == 0) {
         current_time_setter++;
         if (current_time_setter == 2) {
             alarm.minutes = sett_minutes % 60;
@@ -100,7 +98,7 @@ void EnterValue()
             alarm.alarm_state = "active";
         }
     }
-    else if(OnPageAlarmConfig) {
+    else if(page_controller.get_current_page() == 1) {
         alarm.alarm_state = "deactive";
     }
 }
@@ -170,10 +168,8 @@ public:
 class SettAlarm : public Page {
 public:
     void display() override {    
-        OnPageSetAlarm = true;
         sett_hours = 0;
         sett_minutes = 0;
-        printf("Page 1\n");
         bool entered_page = true;
         while(1) {
             if(input_happened || entered_page) {
@@ -208,7 +204,6 @@ public:
 class AlarmConfig : public Page {       //active, going, snooze, mute, deactive
 public:
     void display() override {
-        OnPageAlarmConfig = true;
         bool entered_page = true;
         while(1) {
             if(input_happened || entered_page) {
@@ -321,8 +316,6 @@ int main() {
         // Check if the button is pressed
         if(!buttonPage) {
             // Button is pressed, change the state and call the corresponding function
-            if(OnPageSetAlarm) OnPageSetAlarm = false;
-            if(OnPageAlarmConfig) OnPageAlarmConfig = false;
             page_controller.display_next();
 
             while (!buttonPage) {};
@@ -344,19 +337,17 @@ void alarmOff() {
         if(alarm.alarm_state == "going") {  //Check if alarm has gone off for 10 min
             if(current_rtc_hour == soundUntil.hours && current_rtc_minute == soundUntil.minutes) {
                 alarm.alarm_state = "active";
-                printf("it ran\n");
             }
         }     
-        else if(alarm.alarm_state == "active") {
-            if(current_rtc_hour == alarm.hours && current_rtc_minute == alarm.minutes) {     //Check if the alarm will go off
-                soundUntil.hours = alarm.hours; //Sets up the time the sound will play to
+        else if(alarm.alarm_state == "active") {        //Check if the alarm will go off
+            if(current_rtc_hour == alarm.hours && current_rtc_minute == alarm.minutes) {     
+                soundUntil.hours = alarm.hours; //Sets up the 10 min timer the sound will play to
                 soundUntil.minutes = alarm.minutes + 10;
                 if(soundUntil.minutes > 59) {
                     soundUntil.hours++;
                     soundUntil.minutes -= 60;
                 }
                 alarm.alarm_state = "going";
-                OnPageSetAlarm = false;
                 page_controller.display(1);
             }
         }
@@ -379,7 +370,6 @@ void alarmOff() {
                     current_rtc_minute -= 60;
                 }
                 alarm.alarm_state = "going";
-                OnPageSetAlarm = false;
                 page_controller.display(1);
             }
         }
@@ -404,7 +394,7 @@ void alarmOff() {
     }
 }
 
-void alarm_melody() {
+void alarm_melody() {        //if alarm in state 'going' play melody
     while(1) {
         if(alarm.alarm_state == "going") {
             const int notes[] = {659, 622, 659, 622, 659, 494, 587, 523, 440};
