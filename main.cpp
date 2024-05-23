@@ -3,7 +3,11 @@
 #include "DFRobot_RGBLCD1602.h"
 #include "HTS221Sensor.h"
 
+#include <cstdio>
+#include <cstring>
 #include <ctime>
+#include <iomanip>
+#include <sstream>
 #include <string>
 
 #include "text_utilities.h"
