@@ -218,7 +218,7 @@ public:
 };
 
 // This page allows the user to change the state of the alarm
-class AlarmConfig : public Page {       //active, going, snooze, mute, deactive
+class AlarmConfig : public Page {
 public:
     void display() override {
         bool entered_page = true;
@@ -227,7 +227,7 @@ public:
                 entered_page = false;
                 input_happened = false;
                 lcd.clear();
-                lcd.printf("Alarm"); //Mute(A1),Enable(A2),Disable(A3)
+                lcd.printf("Alarm"); //Enable(A1),Mute(A2),Disable(A3)
                 lcd.setCursor(0, 1);
                 if(strcmp(alarm.alarm_state.c_str(), "going") == 0) {
                     lcd.clear();
