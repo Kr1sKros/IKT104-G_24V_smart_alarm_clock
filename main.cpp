@@ -242,7 +242,7 @@ public:
     void display() override {
         lcd.clear();
         lcd.setCursor(0, 0);  // Set cursor to the first row
-        lcd.printf("Top News:");
+        lcd.printf("Top News CNN:");
         lcd.setCursor(0, 1);  // Set cursor to the second row
         lcd.printf("fetching...");
 
@@ -250,6 +250,7 @@ public:
 
         // Scroll the news headlines on the second row
         text_utils::printScrolling(&lcd, news_header, false, 300, 1);
+        this->display();
     }
 };
 
