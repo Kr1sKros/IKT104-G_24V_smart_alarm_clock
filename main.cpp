@@ -63,57 +63,14 @@ bool input_happened = false;
 bool unmute = false;
 bool snoozeIsHit = false;
 
+// Functions
 void alarmOff();
 void alarm_melody();
-void AddTime() 
-{
-    input_happened = true;
-    if(page_controller.get_current_page() == SetAlarmDisplaynumber) {
-        if(current_time_setter == 0) set_hours++;
-        else if (current_time_setter == 1) set_minutes++;
-    }
-    else if(page_controller.get_current_page() == SetAlarmDisplaynumber+1) {
-        if(strcmp(alarm.alarm_state.c_str(), "going") == 0) {
-            alarm.alarm_state = "snooze";
-            snoozeIsHit = true;
-        }
-        else if(strcmp(alarm.alarm_state.c_str(), "deactive") == 0) 
-            alarm.alarm_state = "active";
-    }
-}
-void SubtractTime() 
-{
-    input_happened = true;
-    if(page_controller.get_current_page() == SetAlarmDisplaynumber) {
-        if(current_time_setter == 0) {
-            if(set_hours-1 < 0) set_hours=23;
-            else set_hours--;
-        }
-        else if (current_time_setter == 1) {
-            if(set_minutes-1 < 0) set_minutes=59;
-            else set_minutes--;
-        }
-    }
-    else if(page_controller.get_current_page() == SetAlarmDisplaynumber+1) {
-        if(strcmp(alarm.alarm_state.c_str(), "going") != 0)
-            alarm.alarm_state = "mute";
-    }
-}
-void EnterValue() 
-{
-    input_happened = true;
-    if(page_controller.get_current_page() == SetAlarmDisplaynumber) {
-        current_time_setter++;
-        if (current_time_setter == 2) {
-            alarm.minutes = set_minutes % 60;
-            alarm.hours = set_hours % 24;
-            alarm.alarm_state = "active";
-        }
-    }
-    else if(page_controller.get_current_page() == SetAlarmDisplaynumber+1) {
-        alarm.alarm_state = "deactive";
-    }
-}
+void AddTime();
+void SubtractTime();
+void EnterValue();
+
+
 // Page definitions. Each page inherits from Page class that runs in a seperate thread with the help of the page controller.
 // Boot page definition. This page runs before the 'main program'
 class Boot : public Page {
@@ -337,6 +294,57 @@ int main() {
     }
 }
 
+
+//Functions
+void AddTime() 
+{
+    input_happened = true;
+    if(page_controller.get_current_page() == SetAlarmDisplaynumber) {
+        if(current_time_setter == 0) set_hours++;
+        else if (current_time_setter == 1) set_minutes++;
+    }
+    else if(page_controller.get_current_page() == SetAlarmDisplaynumber+1) {
+        if(strcmp(alarm.alarm_state.c_str(), "going") == 0) {
+            alarm.alarm_state = "snooze";
+            snoozeIsHit = true;
+        }
+        else if(strcmp(alarm.alarm_state.c_str(), "deactive") == 0) 
+            alarm.alarm_state = "active";
+    }
+}
+void SubtractTime() 
+{
+    input_happened = true;
+    if(page_controller.get_current_page() == SetAlarmDisplaynumber) {
+        if(current_time_setter == 0) {
+            if(set_hours-1 < 0) set_hours=23;
+            else set_hours--;
+        }
+        else if (current_time_setter == 1) {
+            if(set_minutes-1 < 0) set_minutes=59;
+            else set_minutes--;
+        }
+    }
+    else if(page_controller.get_current_page() == SetAlarmDisplaynumber+1) {
+        if(strcmp(alarm.alarm_state.c_str(), "going") != 0)
+            alarm.alarm_state = "mute";
+    }
+}
+void EnterValue() 
+{
+    input_happened = true;
+    if(page_controller.get_current_page() == SetAlarmDisplaynumber) {
+        current_time_setter++;
+        if (current_time_setter == 2) {
+            alarm.minutes = set_minutes % 60;
+            alarm.hours = set_hours % 24;
+            alarm.alarm_state = "active";
+        }
+    }
+    else if(page_controller.get_current_page() == SetAlarmDisplaynumber+1) {
+        alarm.alarm_state = "deactive";
+    }
+}
 
 void alarmOff() {   //Checks time in seperate thread
     while (true) {  //gets current hour and minute
