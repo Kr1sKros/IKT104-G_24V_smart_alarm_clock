@@ -140,13 +140,13 @@ public:
             lcd.printf(currentTime);
             lcd.setCursor(0, 1);
             if(strcmp(alarm.alarm_state.c_str(), "going") == 0) {
-                lcd.printf("Press A1 to snooze");
-            }
-            else if(strcmp(alarm.alarm_state.c_str(), "active") == 0) {
                 lcd.printf("Alarm (A) %i:%i", alarm.hours, alarm.minutes);
             }
-            else if(strcmp(alarm.alarm_state.c_str(), "mute") == 0) {
+            else if(strcmp(alarm.alarm_state.c_str(), "active") == 0) {
                 lcd.printf("Alarm %i:%i", alarm.hours, alarm.minutes);
+            }
+            else if(strcmp(alarm.alarm_state.c_str(), "mute") == 0) {
+                lcd.printf("Alarm (M) %i:%i", alarm.hours, alarm.minutes);
             }
             else if(strcmp(alarm.alarm_state.c_str(), "snooze") == 0) {
                 lcd.printf("Alarm (S) %i:%i", alarm.hours, alarm.minutes);
@@ -194,38 +194,6 @@ public:
                 }
             }
             ThisThread::sleep_for(300ms);
-        }
-    }
-};
-
-// This page allows the user to change the state of the alarm
-class AlarmConfig : public Page {
-public:
-    void display() override {
-        bool entered_page = true;
-        while(1) {
-            if(input_happened || entered_page) {
-                entered_page = false;
-                input_happened = false;
-                lcd.clear();
-                lcd.printf("Alarm"); //Enable(A1),Mute(A2),Disable(A3)
-                lcd.setCursor(0, 1);
-                if(strcmp(alarm.alarm_state.c_str(), "going") == 0) {
-                    lcd.clear();
-                    lcd.printf("Alarm active:");
-                    lcd.setCursor(0, 1);
-                    lcd.printf("Press A1 to snooze");
-                }
-                else if(strcmp(alarm.alarm_state.c_str(), "active") == 0) {
-                    lcd.printf("Alarm (A) %i:%i", alarm.hours, alarm.minutes);
-                }
-                else if(strcmp(alarm.alarm_state.c_str(), "mute") == 0) {
-                    lcd.printf("Alarm %i:%i", alarm.hours, alarm.minutes);
-                }
-                else if(strcmp(alarm.alarm_state.c_str(), "snooze") == 0) {
-                    lcd.printf("Alarm (S) %i:%i", alarm.hours, alarm.minutes);
-                }
-            }
         }
     }
 };
@@ -469,7 +437,6 @@ int main() {
     // Add all pages to page controller. The pages will be displayed in the order that they are added.
     page_controller.add_page(static_cast<Page*>(new dateTime));
     page_controller.add_page(static_cast<Page*>(new SetAlarm));
-    page_controller.add_page(static_cast<Page*>(new AlarmConfig));
     page_controller.add_page(static_cast<Page*>(new TempHum));
     page_controller.add_page(static_cast<Page*>(new SearchCity)); 
     page_controller.add_page(static_cast<Page*>(new Weather)); 
