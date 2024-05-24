@@ -245,7 +245,7 @@ class SearchCity : public Page {
 public:
     void display() override {
         lcd.clear();
-        lcd.setCursor(0, 0);  // Set cursor to the first row
+        lcd.setCursor(0, 0); 
         lcd.printf("A1: Lat/Lon");
         lcd.setCursor(0, 1);
         lcd.printf("A2: City Name");
@@ -297,9 +297,9 @@ private:
                             if (c == '\r' || c == '\n') {
                                 // Finish typing longitude on Enter key press
                                 lat_str[lat_index] = '\0'; // Null terminate the string
-                                lon_str[lon_index] = '\0'; // Null terminate the string
+                                lon_str[lon_index] = '\0';
                                 latitude = atof(lat_str); // Convert to float
-                                longitude = atof(lon_str); // Convert to float
+                                longitude = atof(lon_str); 
                                 printf("\nLongitude entered: %.6f\n", longitude);
 
                                 checkCity = false;
@@ -312,7 +312,7 @@ private:
                                 lcd.printf("Lon: %.6f", longitude);
                                 printf("Displaying Lat: %.6f, Lon: %.6f\n", latitude, longitude);
                                 ThisThread::sleep_for(5s); // Display the coordinates for 5 seconds
-                                return; // Exit the method
+                                return;
                             } else if (c == '\b' || c == 127) {
                                 // Handle backspace
                                 if (lon_index > 0) {
@@ -353,7 +353,7 @@ private:
 
     void enterCityName() {
         lcd.clear();
-        lcd.setCursor(0, 0);  // Set cursor to the first row
+        lcd.setCursor(0, 0); 
         lcd.printf("Enter City name:");
 
         int city_index = 0;
@@ -393,7 +393,7 @@ private:
         lcd.printf("City entered:");
         lcd.setCursor(0, 1);
         lcd.printf("%s", city_name);
-        printf("\nDisplaying city name: %s\n", city_name); // Debugging output
+        printf("\nDisplaying city name: %s\n", city_name); 
         checkCity = true;
         ThisThread::sleep_for(5s); // Display the city name for 5 seconds
     }
@@ -441,9 +441,9 @@ class NewsPage : public Page {
 public:
     void display() override {
         lcd.clear();
-        lcd.setCursor(0, 0);  // Set cursor to the first row
+        lcd.setCursor(0, 0);
         lcd.printf("Top News CNN:");
-        lcd.setCursor(0, 1);  // Set cursor to the second row
+        lcd.setCursor(0, 1);
         lcd.printf("fetching...");
 
         std::string news_header = text_utils::extractTitle(nu.send_get_request("rss.cnn.com", "/rss/cnn_latest.rss").c_str());
