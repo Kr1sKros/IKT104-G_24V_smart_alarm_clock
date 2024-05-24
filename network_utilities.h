@@ -166,6 +166,7 @@ public:
     }
 
     // standardized method for sending requests using https
+    // This function works for all https_responses, as long as we have a correct hostname, resource and a valid certificate of the webpage
     nlohmann::json send_https_request(const char* hostname, const char* resource, const char* cert)
     {
         TLSSocket *https_socket = new TLSSocket;
@@ -192,7 +193,7 @@ public:
             std::cout << "Feil" << std::endl;
             return NULL;
         }
-        std::cout << "test 1" << std::endl;
+
         SocketAddress server_address;
         do {
             result = this->network->gethostbyname(hostname, &server_address);
@@ -205,15 +206,9 @@ public:
 
         std::cout << server_address.get_ip_address() << std::endl;
 
-        std::cout << "test 2" << std::endl;
-
         server_address.set_port(443);
 
-        std::cout << "test 3" << std::endl;
-
         result = https_socket->set_root_ca_cert(cert);
-
-        std::cout << "test 4" << std::endl;
 
         if (result != NSAPI_ERROR_OK)
         {
@@ -222,10 +217,8 @@ public:
         }
 
         https_socket->set_hostname(hostname);
-        std::cout << "test 5" << std::endl;
         
         result = https_socket->connect(server_address); 
-        std::cout << "test 6" << std::endl;
 
         if (result != NSAPI_ERROR_OK)
         {
@@ -235,7 +228,6 @@ public:
 
         nsapi_size_t BytestoSend = strlen(https_request);
         nsapi_size_t sentBytes = 0;
-        std::cout << "test 7" << std::endl;
 
         while (BytestoSend > 0)
         {
@@ -262,7 +254,7 @@ public:
         
         memset(response, 0, 2000);
 
-        do
+        do // Handling response
         {
             result = https_socket->recv(chunk, 100);
             for (int i = 0; i < 100; i++)
@@ -277,7 +269,7 @@ public:
         https_socket->close();
         delete https_socket;
 
-        // Fjerner eventuelt drit som har sneket seg bak json-dataene
+        // Removing characters that may exist behind the last curly bracket in the response
         int safetyCounter = 1000;
         while (response[strlen(response) - 1] != '}')
         {
@@ -293,7 +285,7 @@ public:
 
         char *ptr = strchr(response, '{');
         nlohmann::json jsonData = nlohmann::json::parse(ptr);
-        return jsonData;
+        return jsonData; // Returns this data as a jsonobject, so that its easy to use in main.cpp
     }
 };
 
