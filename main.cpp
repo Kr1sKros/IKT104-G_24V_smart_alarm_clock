@@ -1,3 +1,9 @@
+/**
+@file main.cpp
+@author Krzysztof Manczak, Vetle Andreas Tysland, Elias Vikanes Ommundsen, Anders Langemyr
+*/
+
+/** All includes */
 #include "ThisThread.h"
 #include "mbed.h"
 #include "DFRobot_RGBLCD1602.h"
